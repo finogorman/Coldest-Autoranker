@@ -2,59 +2,91 @@
 <html lang="en">
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Pairwise Song Ranker</title>
+<title>Coldest Autoranker</title>
 <style>
-  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; max-width: 900px; margin: 24px auto; padding: 0 16px; }
-  h1 { font-size: 20px; margin: 0 0 8px; }
-  .wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
-  .card { border: 1px solid #ccc; border-radius: 8px; padding: 16px; min-height: 120px; display: flex; flex-direction: column; justify-content: space-between; }
-  .title { font-weight: 600; }
-  .btns { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-top: 12px; }
-  button { padding: 10px; border-radius: 6px; border: 1px solid #aaa; background: #f5f5f5; cursor: pointer; }
-  button.primary { background: #e6f0ff; border-color: #7da6ff; }
-  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-  progress { width: 260px; height: 16px; }
-  .small { color: #666; font-size: 12px; }
-  ol { padding-left: 20px; }
-  .hidden { display: none; }
+  :root{--line:#e5e5e5;--muted:#666}
+  *{box-sizing:border-box}
+  body{font:14px/1.45 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:#fff;color:#111}
+  header{border-bottom:1px solid var(--line);padding:12px 16px;font-weight:700}
+  main{max-width:1200px;margin:16px auto;padding:0 16px;display:grid;grid-template-columns:1.1fr .9fr;gap:16px}
+  @media (max-width:980px){main{grid-template-columns:1fr}}
+  /* Left: rankings table */
+  .panel{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+  .panel h2{margin:0;padding:10px 12px;border-bottom:1px solid var(--line);font-size:16px}
+  .table-wrap{max-height:70vh;overflow:auto}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left}
+  th{position:sticky;top:0;background:#fafafa;z-index:1}
+  td.rank{width:52px;color:#333}
+  td.song{font-weight:600}
+  td.artist{color:var(--muted)}
+  .muted{color:var(--muted);font-size:12px;margin:8px 12px}
+  /* Right: vote panel */
+  .vote-body{padding:12px}
+  .vote-title{font-weight:700;margin:0 0 4px}
+  .vote-sub{color:var(--muted);margin:0 0 12px}
+  .choices{display:grid;gap:10px}
+  .choice{border:1px solid var(--line);border-radius:10px;padding:14px;cursor:pointer}
+  .choice:hover{outline:2px solid #e3edff;border-color:#c6d9ff}
+  .song-title{font-weight:700}
+  .song-artist{color:var(--muted)}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0}
+  button{padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:#f6f6f6;cursor:pointer}
+  button.primary{background:#e8f0ff;border-color:#b9d0ff}
+  progress{height:14px}
 </style>
 <body>
-<h1>Pairwise Song Ranker</h1>
-<div class="row">
-  <button id="reset">Reset</button>
-  <button id="export" class="hidden">Export CSV</button>
-  <span class="small" id="status">ready</span>
-</div>
+<header>Coldest Autoranker</header>
+<main>
+  <!-- Left: Rankings -->
+  <section class="panel" id="rankPanel">
+    <h2>Rankings</h2>
+    <div class="muted" id="status">Ready</div>
+    <div class="table-wrap">
+      <table id="rankTable">
+        <thead>
+          <tr><th>Rank</th><th>Song</th><th>Artist</th></tr>
+        </thead>
+        <tbody id="rankTbody"></tbody>
+      </table>
+    </div>
+  </section>
 
-<div id="compare" class="wrap hidden">
-  <div class="card">
-    <div class="title" id="leftTitle"></div>
-    <div class="small">Press 1</div>
-    <button id="leftBtn" class="primary">Choose left</button>
-  </div>
-  <div class="card">
-    <div class="title" id="rightTitle"></div>
-    <div class="small">Press 2</div>
-    <button id="rightBtn" class="primary">Choose right</button>
-  </div>
-</div>
+  <!-- Right: Vote -->
+  <section class="panel">
+    <h2>Vote</h2>
+    <div class="vote-body">
+      <p class="vote-title">Which song do you prefer?</p>
+      <p class="vote-sub">Click a box or press <b>1</b>, <b>2</b>, or <b>T</b> for tie.</p>
+      <div class="choices">
+        <div class="choice" id="leftChoice">
+          <div class="song-title" id="leftTitle"></div>
+          <div class="song-artist" id="leftArtist"></div>
+          <div class="muted">Pick: 1</div>
+        </div>
+        <div class="choice" id="rightChoice">
+          <div class="song-title" id="rightTitle"></div>
+          <div class="song-artist" id="rightArtist"></div>
+          <div class="muted">Pick: 2</div>
+        </div>
+      </div>
 
-<div class="btns hidden" id="actions">
-  <button id="tieBtn">Tie (t)</button>
-  <button id="skipBtn">Finish now</button>
-  <button id="undoBtn">Undo</button>
-  <div style="display:flex;align-items:center;gap:8px;">
-    <progress id="prog" max="1" value="0"></progress>
-    <span class="small" id="progTxt"></span>
-  </div>
-</div>
-
-<div id="result" class="hidden">
-  <h2>Final ranking</h2>
-  <ol id="list"></ol>
-</div>
+      <div class="row">
+        <button id="tieBtn">Tie (T)</button>
+        <button id="undoBtn">Undo</button>
+        <button id="exportBtn">Export CSV</button>
+        <button id="resetBtn">Reset</button>
+      </div>
+      <div class="row">
+        <progress id="prog" max="1" value="0"></progress>
+        <span class="muted" id="progTxt">0%</span>
+      </div>
+    </div>
+  </section>
+</main>
 
 <script>
+/* ---------------- Data ---------------- */
 const songs = [
 "Feelin' Love - Euphoria Mix* — 22 Interns, Entasia",
 "Hold On — 49th & Main, Shee",
@@ -318,95 +350,90 @@ const songs = [
 "Control — Zoe Wees",
 ];
 
-// ---------- State ----------
-let work = [];       // queue of arrays to merge
-let nextWork = [];   // next level merges
-let left = null, right = null, i = 0, j = 0, out = [];
-let ranked = null;
-let history = [];    // for undo
-let totalPairs = estimateComparisons(songs.length);
-let donePairs = 0;
+/* ------------- Merge-sort voting engine ------------- */
+let work=[], nextWork=[], left=null, right=null, i=0, j=0, out=[];
+let ranked=null, history=[], donePairs=0, totalPairs=estimateComparisons(songs.length);
 
-// ---------- UI ----------
-const elLeft = document.getElementById('leftTitle');
-const elRight = document.getElementById('rightTitle');
-const compareBox = document.getElementById('compare');
-const actions = document.getElementById('actions');
-const resultBox = document.getElementById('result');
-const list = document.getElementById('list');
+/* ------------- UI refs ------------- */
+const tbody = document.getElementById('rankTbody');
 const statusEl = document.getElementById('status');
+const leftBox = document.getElementById('leftChoice');
+const rightBox = document.getElementById('rightChoice');
+const lTitle = document.getElementById('leftTitle');
+const lArtist = document.getElementById('leftArtist');
+const rTitle = document.getElementById('rightTitle');
+const rArtist = document.getElementById('rightArtist');
+const undoBtn = document.getElementById('undoBtn');
+const tieBtn = document.getElementById('tieBtn');
+const resetBtn = document.getElementById('resetBtn');
+const exportBtn = document.getElementById('exportBtn');
 const prog = document.getElementById('prog');
 const progTxt = document.getElementById('progTxt');
-const exportBtn = document.getElementById('export');
 
-document.getElementById('leftBtn').onclick = () => choose(-1);
-document.getElementById('rightBtn').onclick = () => choose(1);
-document.getElementById('tieBtn').onclick = () => choose(0);
-document.getElementById('skipBtn').onclick = finishEarly;
-document.getElementById('undoBtn').onclick = undo;
-document.getElementById('reset').onclick = () => { localStorage.removeItem('rankerState'); location.reload(); };
+/* ------------- Events ------------- */
+leftBox.onclick = () => choose(-1);
+rightBox.onclick = () => choose(1);
+tieBtn.onclick = () => choose(0);
+undoBtn.onclick = undo;
+resetBtn.onclick = () => { localStorage.removeItem('rankerState'); location.reload(); };
 exportBtn.onclick = exportCSV;
 
-window.addEventListener('keydown', (e) => {
-  if (resultBox.classList.contains('hidden')) {
-    if (e.key === '1') choose(-1);
-    else if (e.key === '2') choose(1);
-    else if (e.key.toLowerCase() === 't') choose(0);
-    else if (e.key.toLowerCase() === 'u') undo();
-  }
+window.addEventListener('keydown', e => {
+  if (ranked) return;
+  const k = e.key.toLowerCase();
+  if (k==='1') choose(-1);
+  else if (k==='2') choose(1);
+  else if (k==='t') choose(0);
+  else if (k==='u') undo();
 });
 
-// ---------- Init ----------
-loadOrFresh();
-  
-function freshStart() {
+/* ------------- Init ------------- */
+const saved = localStorage.getItem('rankerState');
+if (saved) { try { restore(JSON.parse(saved)); } catch{} }
+if (!left && !ranked) freshStart();
+nextMerge();
+
+/* ------------- Functions ------------- */
+function freshStart(){
   work = songs.map(s => [s]);
-  nextWork = [];
-  left = null; right = null; i = j = 0; out = [];
-  donePairs = 0;
+  nextWork = []; left = right = null; i = j = 0; out = [];
+  ranked = null; history = []; donePairs = 0;
   totalPairs = estimateComparisons(songs.length);
-  status('new session');
-  compareBox.classList.remove('hidden');
-  actions.classList.remove('hidden');
+  status('New session');
+  renderTable(currentOrder());
 }
 
-function restore(st) {
-  ({work, nextWork, left, right, i, j, out, ranked, history, donePairs, totalPairs} = st);
-  if (ranked) showResult(ranked);
-  else {
-    compareBox.classList.remove('hidden');
-    actions.classList.remove('hidden');
-  }
+function restore(st){
+  ({work,nextWork,left,right,i,j,out,ranked,history,donePairs,totalPairs} = st);
+  status(ranked ? 'Done' : 'Restored');
+  renderTable(currentOrder());
+  renderPair();
 }
 
-function save() {
-  const st = {work, nextWork, left, right, i, j, out, ranked, history, donePairs, totalPairs};
+function save(){
+  const st = {work,nextWork,left,right,i,j,out,ranked,history,donePairs,totalPairs};
   localStorage.setItem('rankerState', JSON.stringify(st));
 }
 
-// ---------- Merge workflow ----------
-function nextMerge() {
-  if (!left || (i >= left.length && j >= right.length)) {
-    // push remaining if any
-    if (left && right) {
-      if (i < left.length) out.push(...left.slice(i));
-      if (j < right.length) out.push(...right.slice(j));
+function nextMerge(){
+  if (!left || (i>=left.length && j>=right.length)){
+    if (left && right){
+      if (i<left.length) out.push(...left.slice(i));
+      if (j<right.length) out.push(...right.slice(j));
       nextWork.push(out);
     }
-    // pull next pair
     left = work.shift() || null;
     right = work.shift() || null;
     i = j = 0; out = [];
-    if (!left && !right) {
-      // level complete
-      if (nextWork.length === 1) {
+    if (!left && !right){
+      if (nextWork.length === 1){
         ranked = nextWork[0].slice();
-        showResult(ranked);
+        status('Done');
+        renderTable(ranked);
         save();
         return;
       }
-      work = nextWork;
-      nextWork = [];
+      work = nextWork; nextWork = [];
       left = work.shift() || null;
       right = work.shift() || null;
       i = j = 0; out = [];
@@ -416,87 +443,91 @@ function nextMerge() {
   save();
 }
 
-function renderPair() {
-  if (!left || !right) return;
-  elLeft.textContent = left[i] ?? '';
-  elRight.textContent = right[j] ?? '';
+function renderPair(){
+  if (!left || !right){
+    // Nothing to compare at this exact moment (level transition). Show table only.
+    renderTable(currentOrder());
+    updateProgress();
+    return;
+  }
+  const [ls, la] = splitSong(left[i]);
+  const [rs, ra] = splitSong(right[j]);
+  lTitle.textContent = ls; lArtist.textContent = la;
+  rTitle.textContent = rs; rArtist.textContent = ra;
+  status(`Merging: ${left.length} vs ${right.length}`);
+  renderTable(currentOrder());
   updateProgress();
-  status(`merging: ${left.length} vs ${right.length}`);
 }
 
-function choose(cmp) {
+function choose(cmp){
   if (!left || !right) return;
-  // record for undo
-  history.push({cmp, i, j, outLen: out.length});
-  if (cmp === -1) { out.push(left[i]); i++; donePairs++; }
-  else if (cmp === 1) { out.push(right[j]); j++; donePairs++; }
-  else { out.push(left[i]); out.push(right[j]); i++; j++; donePairs++; } // tie counts as one decision
-  if (i >= left.length || j >= right.length) {
-    // flush remainder and move on in nextMerge()
-  }
-  if (i < left.length && j < right.length) {
-    renderPair();
-    save();
-  } else {
-    nextMerge();
-  }
+  history.push({cmp,i,j,outLen:out.length});
+  if (cmp === -1){ out.push(left[i]); i++; donePairs++; }
+  else if (cmp === 1){ out.push(right[j]); j++; donePairs++; }
+  else { out.push(left[i]); out.push(right[j]); i++; j++; donePairs++; }
+  if (i<left.length && j<right.length){ renderPair(); save(); }
+  else { nextMerge(); }
 }
 
-function undo() {
+function undo(){
   const last = history.pop();
   if (!last) return;
-  i = last.i;
-  j = last.j;
-  out.length = last.outLen;
-  donePairs = Math.max(0, donePairs - 1);
-  renderPair();
-  save();
+  i = last.i; j = last.j; out.length = last.outLen;
+  donePairs = Math.max(0, donePairs-1);
+  renderPair(); save();
 }
 
-function finishEarly() {
-  // Complete current merge quickly then flatten remaining
-  if (left) out.push(...(left.slice(i)));
-  if (right) out.push(...(right.slice(j)));
-  nextWork.push(out);
-  // flatten remaining work levels
-  const flat = [...nextWork, ...work].flat();
-  ranked = flat;
-  showResult(ranked);
-  save();
-}
+function status(msg){ statusEl.textContent = msg; }
 
-// ---------- UI helpers ----------
-function showResult(arr) {
-  compareBox.classList.add('hidden');
-  actions.classList.add('hidden');
-  resultBox.classList.remove('hidden');
-  exportBtn.classList.remove('hidden');
-  list.innerHTML = '';
-  arr.forEach((s, idx) => {
-    const li = document.createElement('li');
-    li.textContent = s;
-    list.appendChild(li);
-  });
-  status('done');
-}
-
-function updateProgress() {
-  // crude estimate: comparisons ~ n * log2(n). Track decisions made.
+function updateProgress(){
   prog.max = totalPairs || 1;
   prog.value = Math.min(donePairs, prog.max);
-  const pct = Math.min(100, Math.round((prog.value / prog.max) * 100));
-  progTxt.textContent = `${pct}%`;
+  const pct = Math.round((prog.value / prog.max) * 100);
+  progTxt.textContent = `${Math.min(100, Math.max(0, pct))}%`;
 }
 
-function estimateComparisons(n) {
-  // Approx upper bound for merge sort: n * ceil(log2 n)
-  return n * Math.ceil(Math.log2(Math.max(1, n)));
+function estimateComparisons(n){
+  return n * Math.ceil(Math.log2(Math.max(1,n)));
 }
 
-function status(msg) { statusEl.textContent = msg; }
+function splitSong(s){
+  // "Title — Artist"
+  const parts = s.split(" — ");
+  return [parts[0] || s, parts[1] || ""];
+}
 
-// ---------- kick ----------
-nextMerge();
+function currentOrder(){
+  if (ranked) return ranked.slice();
+  // Flatten a best-effort current sequence
+  const blocks = [];
+  if (out.length) blocks.push(out.slice());
+  if (left) blocks.push((left.slice(i)));
+  if (right) blocks.push((right.slice(j)));
+  if (work.length) blocks.push(...work.map(b=>b.slice()));
+  if (nextWork.length) blocks.push(...nextWork.map(b=>b.slice()));
+  return blocks.flat();
+}
+
+function renderTable(arr){
+  tbody.innerHTML = '';
+  arr.forEach((s, idx) => {
+    const tr = document.createElement('tr');
+    const [title, artist] = splitSong(s);
+    tr.innerHTML = `<td class="rank">${idx+1}</td>
+                    <td class="song">${title}</td>
+                    <td class="artist">${artist}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function exportCSV(){
+  const arr = ranked ? ranked.slice() : currentOrder();
+  const lines = ["Rank,Song — Artist", ...arr.map((s,i)=>`${i+1},"${s.replace(/"/g,'""')}"`)];
+  const blob = new Blob([lines.join("\n")], {type:"text/csv;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = "song_ranking.csv";
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
 </script>
 </body>
 </html>
