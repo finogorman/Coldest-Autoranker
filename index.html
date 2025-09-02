@@ -2,7 +2,7 @@
 <html lang="en">
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Coldest Autoranker</title>
+<title>Coldest Autoranker — Elo</title>
 <style>
   :root{--line:#e5e5e5;--muted:#666}
   *{box-sizing:border-box}
@@ -10,9 +10,9 @@
   header{border-bottom:1px solid var(--line);padding:12px 16px;font-weight:700}
   main{max-width:1200px;margin:16px auto;padding:0 16px;display:grid;grid-template-columns:1.1fr .9fr;gap:16px}
   @media (max-width:980px){main{grid-template-columns:1fr}}
-  /* Left: rankings table */
   .panel{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
   .panel h2{margin:0;padding:10px 12px;border-bottom:1px solid var(--line);font-size:16px}
+  .muted{color:var(--muted);font-size:12px;margin:8px 12px}
   .table-wrap{max-height:70vh;overflow:auto}
   table{width:100%;border-collapse:collapse}
   th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left}
@@ -20,8 +20,7 @@
   td.rank{width:52px;color:#333}
   td.song{font-weight:600}
   td.artist{color:var(--muted)}
-  .muted{color:var(--muted);font-size:12px;margin:8px 12px}
-  /* Right: vote panel */
+  td.elo, td.rec, td.gp{white-space:nowrap;text-align:right}
   .vote-body{padding:12px}
   .vote-title{font-weight:700;margin:0 0 4px}
   .vote-sub{color:var(--muted);margin:0 0 12px}
@@ -36,7 +35,7 @@
   progress{height:14px}
 </style>
 <body>
-<header>Coldest Autoranker</header>
+<header>Coldest Autoranker — Elo</header>
 <main>
   <!-- Left: Rankings -->
   <section class="panel" id="rankPanel">
@@ -45,7 +44,10 @@
     <div class="table-wrap">
       <table id="rankTable">
         <thead>
-          <tr><th>Rank</th><th>Song</th><th>Artist</th></tr>
+          <tr>
+            <th>Rank</th><th>Song</th><th>Artist</th>
+            <th>Elo</th><th>W-L-T</th><th>GP</th>
+          </tr>
         </thead>
         <tbody id="rankTbody"></tbody>
       </table>
@@ -79,15 +81,15 @@
       </div>
       <div class="row">
         <progress id="prog" max="1" value="0"></progress>
-        <span class="muted" id="progTxt">0%</span>
+        <span class="muted" id="progTxt">0 votes</span>
       </div>
     </div>
   </section>
 </main>
 
 <script>
-/* ---------------- Data ---------------- */
-const songs = [
+/* ---------------- Songs ---------------- */
+const rawSongs = [
 "Feelin' Love - Euphoria Mix* — 22 Interns, Entasia",
 "Hold On — 49th & Main, Shee",
 "Gimme! Gimme! Gimme! (A Man After Midnight) — ABBA",
@@ -350,11 +352,13 @@ const songs = [
 "Control — Zoe Wees",
 ];
 
-/* ------------- Merge-sort voting engine ------------- */
-let work=[], nextWork=[], left=null, right=null, i=0, j=0, out=[];
-let ranked=null, history=[], donePairs=0, totalPairs=estimateComparisons(songs.length);
+/* ---------------- Elo engine ---------------- */
+const K = 24; // K-factor
+let votes = 0;
+let items = []; // {id,title,artist,elo,gp,w,l,t}
+let lastMatch = null; // for undo
 
-/* ------------- UI refs ------------- */
+/* ---------------- UI refs ---------------- */
 const tbody = document.getElementById('rankTbody');
 const statusEl = document.getElementById('status');
 const leftBox = document.getElementById('leftChoice');
@@ -370,163 +374,170 @@ const exportBtn = document.getElementById('exportBtn');
 const prog = document.getElementById('prog');
 const progTxt = document.getElementById('progTxt');
 
-/* ------------- Events ------------- */
-leftBox.onclick = () => choose(-1);
-rightBox.onclick = () => choose(1);
-tieBtn.onclick = () => choose(0);
+/* ---------------- Events ---------------- */
+leftBox.onclick = () => vote('L');
+rightBox.onclick = () => vote('R');
+tieBtn.onclick = () => vote('T');
 undoBtn.onclick = undo;
-resetBtn.onclick = () => { localStorage.removeItem('rankerState'); location.reload(); };
+resetBtn.onclick = () => { localStorage.removeItem('eloRanker'); location.reload(); };
 exportBtn.onclick = exportCSV;
 
 window.addEventListener('keydown', e => {
-  if (ranked) return;
   const k = e.key.toLowerCase();
-  if (k==='1') choose(-1);
-  else if (k==='2') choose(1);
-  else if (k==='t') choose(0);
+  if (k==='1') vote('L');
+  else if (k==='2') vote('R');
+  else if (k==='t') vote('T');
   else if (k==='u') undo();
 });
 
-/* ------------- Init ------------- */
-const saved = localStorage.getItem('rankerState');
-if (saved) { try { restore(JSON.parse(saved)); } catch{} }
-if (!left && !ranked) freshStart();
-nextMerge();
+/* ---------------- Init ---------------- */
+loadOrSeed();
+renderRankings();
+pickAndRenderPair();
 
-/* ------------- Functions ------------- */
-function freshStart(){
-  work = songs.map(s => [s]);
-  nextWork = []; left = right = null; i = j = 0; out = [];
-  ranked = null; history = []; donePairs = 0;
-  totalPairs = estimateComparisons(songs.length);
-  status('New session');
-  renderTable(currentOrder());
-}
-
-function restore(st){
-  ({work,nextWork,left,right,i,j,out,ranked,history,donePairs,totalPairs} = st);
-  status(ranked ? 'Done' : 'Restored');
-  renderTable(currentOrder());
-  renderPair();
-}
-
-function save(){
-  const st = {work,nextWork,left,right,i,j,out,ranked,history,donePairs,totalPairs};
-  localStorage.setItem('rankerState', JSON.stringify(st));
-}
-
-function nextMerge(){
-  if (!left || (i>=left.length && j>=right.length)){
-    if (left && right){
-      if (i<left.length) out.push(...left.slice(i));
-      if (j<right.length) out.push(...right.slice(j));
-      nextWork.push(out);
-    }
-    left = work.shift() || null;
-    right = work.shift() || null;
-    i = j = 0; out = [];
-    if (!left && !right){
-      if (nextWork.length === 1){
-        ranked = nextWork[0].slice();
-        status('Done');
-        renderTable(ranked);
-        save();
-        return;
-      }
-      work = nextWork; nextWork = [];
-      left = work.shift() || null;
-      right = work.shift() || null;
-      i = j = 0; out = [];
-    }
+/* ---------------- Functions ---------------- */
+function loadOrSeed(){
+  const saved = localStorage.getItem('eloRanker');
+  if (saved){
+    try {
+      const s = JSON.parse(saved);
+      items = s.items; votes = s.votes; lastMatch = null;
+      status('Restored');
+      return;
+    } catch {}
   }
-  renderPair();
+  items = rawSongs.map((s, idx) => {
+    const [title, artist] = splitSong(s);
+    return { id: idx, title, artist, elo: 1000, gp: 0, w:0, l:0, t:0 };
+  });
+  votes = 0; lastMatch = null;
+  status('New session');
   save();
 }
 
-function renderPair(){
-  if (!left || !right){
-    // Nothing to compare at this exact moment (level transition). Show table only.
-    renderTable(currentOrder());
-    updateProgress();
-    return;
-  }
-  const [ls, la] = splitSong(left[i]);
-  const [rs, ra] = splitSong(right[j]);
-  lTitle.textContent = ls; lArtist.textContent = la;
-  rTitle.textContent = rs; rArtist.textContent = ra;
-  status(`Merging: ${left.length} vs ${right.length}`);
-  renderTable(currentOrder());
-  updateProgress();
-}
-
-function choose(cmp){
-  if (!left || !right) return;
-  history.push({cmp,i,j,outLen:out.length});
-  if (cmp === -1){ out.push(left[i]); i++; donePairs++; }
-  else if (cmp === 1){ out.push(right[j]); j++; donePairs++; }
-  else { out.push(left[i]); out.push(right[j]); i++; j++; donePairs++; }
-  if (i<left.length && j<right.length){ renderPair(); save(); }
-  else { nextMerge(); }
-}
-
-function undo(){
-  const last = history.pop();
-  if (!last) return;
-  i = last.i; j = last.j; out.length = last.outLen;
-  donePairs = Math.max(0, donePairs-1);
-  renderPair(); save();
+function save(){
+  localStorage.setItem('eloRanker', JSON.stringify({items, votes}));
 }
 
 function status(msg){ statusEl.textContent = msg; }
 
-function updateProgress(){
-  prog.max = totalPairs || 1;
-  prog.value = Math.min(donePairs, prog.max);
-  const pct = Math.round((prog.value / prog.max) * 100);
-  progTxt.textContent = `${Math.min(100, Math.max(0, pct))}%`;
-}
-
-function estimateComparisons(n){
-  return n * Math.ceil(Math.log2(Math.max(1,n)));
-}
-
 function splitSong(s){
-  // "Title — Artist"
   const parts = s.split(" — ");
   return [parts[0] || s, parts[1] || ""];
 }
 
-function currentOrder(){
-  if (ranked) return ranked.slice();
-  // Flatten a best-effort current sequence
-  const blocks = [];
-  if (out.length) blocks.push(out.slice());
-  if (left) blocks.push((left.slice(i)));
-  if (right) blocks.push((right.slice(j)));
-  if (work.length) blocks.push(...work.map(b=>b.slice()));
-  if (nextWork.length) blocks.push(...nextWork.map(b=>b.slice()));
-  return blocks.flat();
+function expected(a, b){
+  return 1 / (1 + Math.pow(10, (b - a)/400));
 }
 
-function renderTable(arr){
+function applyElo(a, b, outcome){ // outcome: 'A','B','T'
+  const Ea = expected(a.elo, b.elo);
+  const Eb = expected(b.elo, a.elo);
+  let Sa=0, Sb=0;
+  if (outcome==='A'){ Sa=1; Sb=0; a.w++; b.l++; }
+  else if (outcome==='B'){ Sa=0; Sb=1; a.l++; b.w++; }
+  else { Sa=0.5; Sb=0.5; a.t++; b.t++; }
+  a.elo = round2(a.elo + K*(Sa - Ea));
+  b.elo = round2(b.elo + K*(Sb - Eb));
+  a.gp++; b.gp++;
+}
+
+function round2(x){ return Math.round(x*100)/100; }
+
+function pickPair(){
+  // Prefer items with fewer games. Then pick opponent with closest Elo.
+  const minGp = Math.min(...items.map(it=>it.gp));
+  const pool = items.filter(it => it.gp <= minGp + 2);
+  const A = pool[Math.floor(Math.random()*pool.length)];
+  // nearest Elo not the same id
+  const opponents = items.filter(it => it.id !== A.id);
+  opponents.sort((x,y)=>Math.abs(x.elo-A.elo)-Math.abs(y.elo-A.elo));
+  const B = opponents[0] || items.find(it=>it.id!==A.id);
+  return [A,B];
+}
+
+let curA=null, curB=null;
+
+function pickAndRenderPair(){
+  [curA, curB] = pickPair();
+  lTitle.textContent = curA.title; lArtist.textContent = curA.artist;
+  rTitle.textContent = curB.title; rArtist.textContent = curB.artist;
+  status(`Vote #${votes+1}`);
+  prog.max = Math.max(1, votes+1);
+  prog.value = votes;
+  progTxt.textContent = `${votes} votes`;
+}
+
+function vote(which){
+  if (!curA || !curB) return;
+  // snapshot for undo
+  lastMatch = {
+    aId: curA.id, bId: curB.id,
+    aElo: curA.elo, bElo: curB.elo,
+    aRec:{w:curA.w,l:curA.l,t:curA.t,gp:curA.gp},
+    bRec:{w:curB.w,l:curB.l,t:curB.t,gp:curB.gp}
+  };
+  if (which==='L') applyElo(curA, curB, 'A');
+  else if (which==='R') applyElo(curA, curB, 'B');
+  else applyElo(curA, curB, 'T');
+  votes++;
+  save();
+  renderRankings();
+  pickAndRenderPair();
+}
+
+function undo(){
+  if (!lastMatch) return;
+  const A = items.find(x=>x.id===lastMatch.aId);
+  const B = items.find(x=>x.id===lastMatch.bId);
+  if (!A || !B) return;
+  A.elo = lastMatch.aElo; B.elo = lastMatch.bElo;
+  A.w = lastMatch.aRec.w; A.l = lastMatch.aRec.l; A.t = lastMatch.aRec.t; A.gp = lastMatch.aRec.gp;
+  B.w = lastMatch.bRec.w; B.l = lastMatch.bRec.l; B.t = lastMatch.bRec.t; B.gp = lastMatch.bRec.gp;
+  votes = Math.max(0, votes-1);
+  lastMatch = null;
+  save();
+  renderRankings();
+  pickAndRenderPair();
+}
+
+function renderRankings(){
+  const sorted = items.slice().sort((a,b)=> b.elo - a.elo || a.title.localeCompare(b.title));
   tbody.innerHTML = '';
-  arr.forEach((s, idx) => {
+  sorted.forEach((it, idx) => {
     const tr = document.createElement('tr');
-    const [title, artist] = splitSong(s);
-    tr.innerHTML = `<td class="rank">${idx+1}</td>
-                    <td class="song">${title}</td>
-                    <td class="artist">${artist}</td>`;
+    tr.innerHTML = `
+      <td class="rank">${idx+1}</td>
+      <td class="song">${escapeHtml(it.title)}</td>
+      <td class="artist">${escapeHtml(it.artist)}</td>
+      <td class="elo">${it.elo.toFixed(2)}</td>
+      <td class="rec">${it.w}-${it.l}-${it.t}</td>
+      <td class="gp">${it.gp}</td>
+    `;
     tbody.appendChild(tr);
   });
 }
 
 function exportCSV(){
-  const arr = ranked ? ranked.slice() : currentOrder();
-  const lines = ["Rank,Song — Artist", ...arr.map((s,i)=>`${i+1},"${s.replace(/"/g,'""')}"`)];
+  const sorted = items.slice().sort((a,b)=> b.elo - a.elo || a.title.localeCompare(b.title));
+  const lines = ["Rank,Song,Artist,Elo,W,L,T,GP"];
+  sorted.forEach((it, idx)=>{
+    const row = [
+      idx+1,
+      '"' + it.title.replace(/"/g,'""') + '"',
+      '"' + it.artist.replace(/"/g,'""') + '"',
+      it.elo.toFixed(2), it.w, it.l, it.t, it.gp
+    ].join(',');
+    lines.push(row);
+  });
   const blob = new Blob([lines.join("\n")], {type:"text/csv;charset=utf-8"});
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = "song_ranking.csv";
+  const a = document.createElement('a'); a.href = url; a.download = "song_elo.csv";
   document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+
+function escapeHtml(s){
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
 </script>
 </body>
