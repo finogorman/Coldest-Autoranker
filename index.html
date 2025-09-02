@@ -358,16 +358,7 @@ window.addEventListener('keydown', (e) => {
 
 // ---------- Init ----------
 loadOrFresh();
-
-function loadOrFresh() {
-  const saved = localStorage.getItem('rankerState');
-  if (saved) {
-    try { restore(JSON.parse(saved)); } catch {}
-  }
-  if (!left && !ranked) freshStart();
-  tick();
-}
-
+  
 function freshStart() {
   work = songs.map(s => [s]);
   nextWork = [];
