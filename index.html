@@ -1,95 +1,148 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Coldest Autoranker — Elo</title>
-<style>
-  :root{--line:#e5e5e5;--muted:#666}
-  *{box-sizing:border-box}
-  body{font:14px/1.45 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:#fff;color:#111}
-  header{border-bottom:1px solid var(--line);padding:12px 16px;font-weight:700}
-  main{max-width:1200px;margin:16px auto;padding:0 16px;display:grid;grid-template-columns:1.1fr .9fr;gap:16px}
-  @media (max-width:980px){main{grid-template-columns:1fr}}
-  .panel{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
-  .panel h2{margin:0;padding:10px 12px;border-bottom:1px solid var(--line);font-size:16px}
-  .muted{color:var(--muted);font-size:12px;margin:8px 12px}
-  .table-wrap{max-height:70vh;overflow:auto}
-  table{width:100%;border-collapse:collapse}
-  th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left}
-  th{position:sticky;top:0;background:#fafafa;z-index:1}
-  td.rank{width:52px;color:#333}
-  td.song{font-weight:600}
-  td.artist{color:var(--muted)}
-  td.elo, td.rec, td.gp{white-space:nowrap;text-align:right}
-  .vote-body{padding:12px}
-  .vote-title{font-weight:700;margin:0 0 4px}
-  .vote-sub{color:var(--muted);margin:0 0 12px}
-  .choices{display:grid;gap:10px}
-  .choice{border:1px solid var(--line);border-radius:10px;padding:14px;cursor:pointer}
-  .choice:hover{outline:2px solid #e3edff;border-color:#c6d9ff}
-  .song-title{font-weight:700}
-  .song-artist{color:var(--muted)}
-  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0}
-  button{padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:#f6f6f6;cursor:pointer}
-  button.primary{background:#e8f0ff;border-color:#b9d0ff}
-  progress{height:14px}
-</style>
+<head>
+  <meta charset="UTF-8">
+  <title>Song Elo Ranking</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --border: #e5e5e5;
+      --primary: #0061a8;
+      --muted: #818181;
+      --table-header-bg: #f1f5f9;
+      --box-bg: #fff;
+      --box-hover: #def;
+      --shadow: 0 2px 8px rgba(0,0,0,0.03);
+    }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: #202124;
+      font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+    }
+    .container {
+      display: flex;
+      flex-direction: row;
+      max-width: 1200px;
+      margin: 32px auto;
+      gap: 32px;
+      min-height: 80vh;
+      padding: 0 16px;
+    }
+    .column {
+      flex: 1;
+      background: var(--box-bg);
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      padding: 24px 20px 24px 20px;
+      display: flex;
+      flex-direction: column;
+      min-width: 350px;
+    }
+    .rankings-table-wrapper { flex: 1; overflow: auto; }
+    table.rankings {
+      width: 100%; border-collapse: collapse; font-size: 16px;
+    }
+    table.rankings th, table.rankings td {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      text-align: left; vertical-align: middle;
+    }
+    table.rankings th {
+      position: sticky; top: 0;
+      background: var(--table-header-bg);
+      z-index: 2;
+      border-bottom: 2px solid var(--border);
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+    .vote-panel-title { font-size: 2em; font-weight: 700; margin-bottom: 4px; }
+    .vote-panel { display: flex; flex-direction: column; gap: 14px; align-items: center; flex: 1; }
+    .vote-question { font-size: 1.15em; color: var(--muted); margin-bottom: 10px; }
+    .vote-boxes { display: flex; gap: 32px; width: 100%; justify-content: center; margin-bottom: 14px; }
+    .vote-box {
+      flex: 1 1 0; min-width: 180px; max-width: 260px;
+      background: var(--box-bg);
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      padding: 32px 20px;
+      display: flex; flex-direction: column; align-items: center;
+      transition: border-color 0.2s, background 0.2s;
+      font-size: 1.2em; font-weight: 500;
+      user-select: none;
+    }
+    .vote-box:hover, .vote-box.active { border-color: var(--primary); background: var(--box-hover); }
+    .vote-box .song-title { font-size: 1.18em; font-weight: 600; margin-bottom: 6px; text-align: center; }
+    .vote-box .song-artist { font-size: 1em; color: var(--muted); text-align: center; }
+    .vote-buttons { display: flex; gap: 14px; margin: 18px 0 6px 0; flex-wrap: wrap; justify-content: center; }
+    .vote-btn {
+      padding: 8px 18px; font-size: 1em; border-radius: 7px;
+      border: 1px solid var(--border);
+      background: var(--box-bg); color: var(--primary);
+      cursor: pointer; font-weight: 500;
+      transition: background 0.2s, border-color 0.2s;
+      box-shadow: var(--shadow);
+    }
+    .vote-btn:hover { background: var(--box-hover); border-color: var(--primary); }
+    .vote-btn.export { color: #008a19; border-color: #b6e5c8; }
+    .vote-btn.reset { color: #c80000; border-color: #f6b4b4; }
+    .progress-bar-container {
+      width: 100%; margin-top: 10px; height: 22px;
+      background: var(--border); border-radius: 12px; overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .progress-bar { height: 100%; background: linear-gradient(90deg, var(--primary) 65%, #59b6fc 100%); transition: width 0.2s; border-radius: 12px; }
+    .progress-label { text-align: right; font-size: 0.99em; color: var(--muted); margin-top: 6px; }
+    @media (max-width: 950px) { .container { flex-direction: column; gap: 24px; } .column { min-width: 0; width: 100%; } .vote-boxes { gap: 14px; } }
+    @media (max-width: 650px) { .vote-box { padding: 18px 6px; font-size: 1em; } .vote-panel-title { font-size: 1.4em; } }
+  </style>
+</head>
 <body>
-<header>Coldest Autoranker — Elo</header>
-<main>
-  <!-- Left: Rankings -->
-  <section class="panel" id="rankPanel">
-    <h2>Rankings</h2>
-    <div class="muted" id="status">Ready</div>
-    <div class="table-wrap">
-      <table id="rankTable">
-        <thead>
-          <tr>
-            <th>Rank</th><th>Song</th><th>Artist</th>
-            <th>Elo</th><th>W-L-T</th><th>GP</th>
-          </tr>
-        </thead>
-        <tbody id="rankTbody"></tbody>
-      </table>
-    </div>
-  </section>
-
-  <!-- Right: Vote -->
-  <section class="panel">
-    <h2>Vote</h2>
-    <div class="vote-body">
-      <p class="vote-title">Which song do you prefer?</p>
-      <p class="vote-sub">Click a box or press <b>1</b>, <b>2</b>, or <b>T</b> for tie.</p>
-      <div class="choices">
-        <div class="choice" id="leftChoice">
-          <div class="song-title" id="leftTitle"></div>
-          <div class="song-artist" id="leftArtist"></div>
-          <div class="muted">Pick: 1</div>
-        </div>
-        <div class="choice" id="rightChoice">
-          <div class="song-title" id="rightTitle"></div>
-          <div class="song-artist" id="rightArtist"></div>
-          <div class="muted">Pick: 2</div>
-        </div>
-      </div>
-
-      <div class="row">
-        <button id="tieBtn">Tie (T)</button>
-        <button id="undoBtn">Undo</button>
-        <button id="exportBtn">Export CSV</button>
-        <button id="resetBtn">Reset</button>
-      </div>
-      <div class="row">
-        <progress id="prog" max="1" value="0"></progress>
-        <span class="muted" id="progTxt">0 votes</span>
+  <div class="container">
+    <!-- Rankings Table (Left) -->
+    <div class="column">
+      <h2 style="margin:0 0 12px 0; font-size:1.35em;">Rankings</h2>
+      <div class="rankings-table-wrapper">
+        <table class="rankings" id="rankingsTable">
+          <thead>
+            <tr><th>Rank</th><th>Song</th><th>Artist</th><th>Elo</th><th>W-L-T</th><th>GP</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
       </div>
     </div>
-  </section>
-</main>
-
-<script>
-/* ---------------- Songs ---------------- */
-const rawSongs = [
+    <!-- Voting Panel (Right) -->
+    <div class="column vote-panel">
+      <div class="vote-panel-title">Vote</div>
+      <div class="vote-question">Which song do you prefer?</div>
+      <div class="vote-boxes">
+        <div class="vote-box" id="voteBoxLeft">
+          <div class="song-title" id="leftSongTitle">Song A</div>
+          <div class="song-artist" id="leftSongArtist">Artist A</div>
+        </div>
+        <div class="vote-box" id="voteBoxRight">
+          <div class="song-title" id="rightSongTitle">Song B</div>
+          <div class="song-artist" id="rightSongArtist">Artist B</div>
+        </div>
+      </div>
+      <div class="vote-buttons">
+        <button class="vote-btn" id="tieBtn">Tie [T]</button>
+        <button class="vote-btn" id="undoBtn">Undo [U]</button>
+        <button class="vote-btn export" id="exportBtn">Export CSV</button>
+        <button class="vote-btn reset" id="resetBtn">Reset</button>
+      </div>
+      <div class="progress-bar-container">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+      <div class="progress-label" id="progressLabel">0 votes cast</div>
+    </div>
+  </div>
+  <script>
+    const SONG_ARRAY = [
 "Feelin' Love - Euphoria Mix* — 22 Interns, Entasia",
 "Hold On — 49th & Main, Shee",
 "Gimme! Gimme! Gimme! (A Man After Midnight) — ABBA",
@@ -349,196 +402,58 @@ const rawSongs = [
 "One More Time (I Need U) — Y U QT",
 "You Know What I Want — Y U QT",
 "We Come Running — Youngblood Hawke",
-"Control — Zoe Wees",
+"Control — Zoe Wees"
 ];
 
-/* ---------------- Elo engine ---------------- */
-const K = 24; // K-factor
-let votes = 0;
-let items = []; // {id,title,artist,elo,gp,w,l,t}
-let lastMatch = null; // for undo
+    const K_FACTOR = 24;
+    const STORAGE_KEY = "songEloRanking_v1";
+    let songs = [], voteHistory = [], voteCount = 0, currentPair = [null,null];
 
-/* ---------------- UI refs ---------------- */
-const tbody = document.getElementById('rankTbody');
-const statusEl = document.getElementById('status');
-const leftBox = document.getElementById('leftChoice');
-const rightBox = document.getElementById('rightChoice');
-const lTitle = document.getElementById('leftTitle');
-const lArtist = document.getElementById('leftArtist');
-const rTitle = document.getElementById('rightTitle');
-const rArtist = document.getElementById('rightArtist');
-const undoBtn = document.getElementById('undoBtn');
-const tieBtn = document.getElementById('tieBtn');
-const resetBtn = document.getElementById('resetBtn');
-const exportBtn = document.getElementById('exportBtn');
-const prog = document.getElementById('prog');
-const progTxt = document.getElementById('progTxt');
+    const rankingsTableBody = document.querySelector("#rankingsTable tbody");
+    const leftSongTitle = document.getElementById("leftSongTitle");
+    const leftSongArtist = document.getElementById("leftSongArtist");
+    const rightSongTitle = document.getElementById("rightSongTitle");
+    const rightSongArtist = document.getElementById("rightSongArtist");
+    const voteBoxLeft = document.getElementById("voteBoxLeft");
+    const voteBoxRight = document.getElementById("voteBoxRight");
+    const tieBtn = document.getElementById("tieBtn");
+    const undoBtn = document.getElementById("undoBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const exportBtn = document.getElementById("exportBtn");
+    const progressBar = document.getElementById("progressBar");
+    const progressLabel = document.getElementById("progressLabel");
 
-/* ---------------- Events ---------------- */
-leftBox.onclick = () => vote('L');
-rightBox.onclick = () => vote('R');
-tieBtn.onclick = () => vote('T');
-undoBtn.onclick = undo;
-resetBtn.onclick = () => { localStorage.removeItem('eloRanker'); location.reload(); };
-exportBtn.onclick = exportCSV;
+    function parseSong(s){ let [title,artist]=s.split(" — "); return {title:title.trim(),artist:artist?artist.trim():""};}
+    function formatWLT(s){ return `${s.wins}-${s.losses}-${s.ties}`;}
+    function toCSV(arr){ let header="Rank,Song,Artist,Elo,W-L-T,GP"; let rows=arr.map((s,i)=>[i+1,`"${s.title}"`,`"${s.artist}"`,s.elo.toFixed(1),`"${formatWLT(s)}"`,s.games].join(",")); return header+"\n"+rows.join("\n"); }
+    function saveState(){ localStorage.setItem(STORAGE_KEY,JSON.stringify({songs,voteHistory,voteCount})); }
+    function loadState(){ let d=localStorage.getItem(STORAGE_KEY); if(!d)return false; try{let o=JSON.parse(d);songs=o.songs;voteHistory=o.voteHistory||[];voteCount=o.voteCount||0;return true;}catch{return false;} }
+    function resetState(){ songs=SONG_ARRAY.map((s,idx)=>{let {title,artist}=parseSong(s);return{title,artist,elo:1000,wins:0,losses:0,ties:0,games:0,idx};}); voteHistory=[];voteCount=0; saveState();}
+    function expected(a,b){ return 1/(1+Math.pow(10,(b-a)/400)); }
+    function applyVote(idxA,idxB,winner,tie=false){
+      let a=songs.find(x=>x.idx===idxA), b=songs.find(x=>x.idx===idxB);
+      let Ea=expected(a.elo,b.elo), Eb=expected(b.elo,a.elo);
+      let Sa,Sb; if(tie){Sa=0.5;Sb=0.5;a.ties++;b.ties++;} else if(winner===0){Sa=1;Sb=0;a.wins++;b.losses++;} else{Sa=0;Sb=1;a.losses++;b.wins++;}
+      voteHistory.push({idxA,idxB,prevA:{...a},prevB:{...b}});
+      a.elo+=K_FACTOR*(Sa-Ea); b.elo+=K_FACTOR*(Sb-Eb); a.games++; b.games++; voteCount++; saveState(); resortSongs();
+    }
+    function undoLastVote(){ if(!voteHistory.length)return; let last=voteHistory.pop(); Object.assign(songs.find(x=>x.idx===last.idxA),last.prevA); Object.assign(songs.find(x=>x.idx===last.idxB),last.prevB); voteCount=Math.max(0,voteCount-1); saveState(); resortSongs(); showPair(last.idxA,last.idxB);}
+    function resortSongs(){ songs.sort((a,b)=>b.elo-a.elo||a.title.localeCompare(b.title)); }
+    function pickPair(){ let minGames=Math.min(...songs.map(s=>s.games)); let pool=songs.filter(s=>s.games===minGames); let A=pool[Math.floor(Math.random()*pool.length)]; let others=songs.filter(s=>s.idx!==A.idx); others.sort((x,y)=>Math.abs(x.elo-A.elo)-Math.abs(y.elo-A.elo)); let B=others[0]; return [A.idx,B.idx]; }
+    function showPair(idxA,idxB){ currentPair=[idxA,idxB]; let a=songs.find(s=>s.idx===idxA), b=songs.find(s=>s.idx===idxB); leftSongTitle.textContent=a.title;leftSongArtist.textContent=a.artist; rightSongTitle.textContent=b.title;rightSongArtist.textContent=b.artist;}
+    function nextPair(){ let [i,j]=pickPair(); showPair(i,j);}
+    function renderTable(){ rankingsTableBody.innerHTML=songs.map((s,i)=>`<tr><td>${i+1}</td><td>${s.title}</td><td>${s.artist}</td><td>${s.elo.toFixed(1)}</td><td>${formatWLT(s)}</td><td>${s.games}</td></tr>`).join(""); }
+    function renderProgress(){ let maxVotes=Math.max(100,voteCount,...songs.map(s=>s.games)); let pct=voteCount/maxVotes; progressBar.style.width=`${(pct*100).toFixed(1)}%`; progressLabel.textContent=`${voteCount} vote${voteCount===1?"":"s"} cast`; }
 
-window.addEventListener('keydown', e => {
-  const k = e.key.toLowerCase();
-  if (k==='1') vote('L');
-  else if (k==='2') vote('R');
-  else if (k==='t') vote('T');
-  else if (k==='u') undo();
-});
+    voteBoxLeft.onclick=()=>{applyVote(currentPair[0],currentPair[1],0,false);renderTable();renderProgress();nextPair();};
+    voteBoxRight.onclick=()=>{applyVote(currentPair[0],currentPair[1],1,false);renderTable();renderProgress();nextPair();};
+    tieBtn.onclick=()=>{applyVote(currentPair[0],currentPair[1],null,true);renderTable();renderProgress();nextPair();};
+    undoBtn.onclick=()=>{undoLastVote();renderTable();renderProgress();};
+    resetBtn.onclick=()=>{if(confirm("Reset all progress?")){resetState();resortSongs();renderTable();renderProgress();nextPair();}};
+    exportBtn.onclick=()=>{let csv=toCSV(songs);let blob=new Blob([csv],{type:'text/csv'});let url=URL.createObjectURL(blob);let a=document.createElement('a');a.href=url;a.download="song_rankings.csv";document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);};
+    window.addEventListener("keydown",e=>{if(e.key==="1")voteBoxLeft.click();else if(e.key==="2")voteBoxRight.click();else if(e.key.toLowerCase()==="t")tieBtn.click();else if(e.key.toLowerCase()==="u")undoBtn.click();});
 
-/* ---------------- Init ---------------- */
-loadOrSeed();
-renderRankings();
-pickAndRenderPair();
-
-/* ---------------- Functions ---------------- */
-function loadOrSeed(){
-  const saved = localStorage.getItem('eloRanker');
-  if (saved){
-    try {
-      const s = JSON.parse(saved);
-      items = s.items; votes = s.votes; lastMatch = null;
-      status('Restored');
-      return;
-    } catch {}
-  }
-  items = rawSongs.map((s, idx) => {
-    const [title, artist] = splitSong(s);
-    return { id: idx, title, artist, elo: 1000, gp: 0, w:0, l:0, t:0 };
-  });
-  votes = 0; lastMatch = null;
-  status('New session');
-  save();
-}
-
-function save(){
-  localStorage.setItem('eloRanker', JSON.stringify({items, votes}));
-}
-
-function status(msg){ statusEl.textContent = msg; }
-
-function splitSong(s){
-  const parts = s.split(" — ");
-  return [parts[0] || s, parts[1] || ""];
-}
-
-function expected(a, b){
-  return 1 / (1 + Math.pow(10, (b - a)/400));
-}
-
-function applyElo(a, b, outcome){ // outcome: 'A','B','T'
-  const Ea = expected(a.elo, b.elo);
-  const Eb = expected(b.elo, a.elo);
-  let Sa=0, Sb=0;
-  if (outcome==='A'){ Sa=1; Sb=0; a.w++; b.l++; }
-  else if (outcome==='B'){ Sa=0; Sb=1; a.l++; b.w++; }
-  else { Sa=0.5; Sb=0.5; a.t++; b.t++; }
-  a.elo = round2(a.elo + K*(Sa - Ea));
-  b.elo = round2(b.elo + K*(Sb - Eb));
-  a.gp++; b.gp++;
-}
-
-function round2(x){ return Math.round(x*100)/100; }
-
-function pickPair(){
-  // Prefer items with fewer games. Then pick opponent with closest Elo.
-  const minGp = Math.min(...items.map(it=>it.gp));
-  const pool = items.filter(it => it.gp <= minGp + 2);
-  const A = pool[Math.floor(Math.random()*pool.length)];
-  // nearest Elo not the same id
-  const opponents = items.filter(it => it.id !== A.id);
-  opponents.sort((x,y)=>Math.abs(x.elo-A.elo)-Math.abs(y.elo-A.elo));
-  const B = opponents[0] || items.find(it=>it.id!==A.id);
-  return [A,B];
-}
-
-let curA=null, curB=null;
-
-function pickAndRenderPair(){
-  [curA, curB] = pickPair();
-  lTitle.textContent = curA.title; lArtist.textContent = curA.artist;
-  rTitle.textContent = curB.title; rArtist.textContent = curB.artist;
-  status(`Vote #${votes+1}`);
-  prog.max = Math.max(1, votes+1);
-  prog.value = votes;
-  progTxt.textContent = `${votes} votes`;
-}
-
-function vote(which){
-  if (!curA || !curB) return;
-  // snapshot for undo
-  lastMatch = {
-    aId: curA.id, bId: curB.id,
-    aElo: curA.elo, bElo: curB.elo,
-    aRec:{w:curA.w,l:curA.l,t:curA.t,gp:curA.gp},
-    bRec:{w:curB.w,l:curB.l,t:curB.t,gp:curB.gp}
-  };
-  if (which==='L') applyElo(curA, curB, 'A');
-  else if (which==='R') applyElo(curA, curB, 'B');
-  else applyElo(curA, curB, 'T');
-  votes++;
-  save();
-  renderRankings();
-  pickAndRenderPair();
-}
-
-function undo(){
-  if (!lastMatch) return;
-  const A = items.find(x=>x.id===lastMatch.aId);
-  const B = items.find(x=>x.id===lastMatch.bId);
-  if (!A || !B) return;
-  A.elo = lastMatch.aElo; B.elo = lastMatch.bElo;
-  A.w = lastMatch.aRec.w; A.l = lastMatch.aRec.l; A.t = lastMatch.aRec.t; A.gp = lastMatch.aRec.gp;
-  B.w = lastMatch.bRec.w; B.l = lastMatch.bRec.l; B.t = lastMatch.bRec.t; B.gp = lastMatch.bRec.gp;
-  votes = Math.max(0, votes-1);
-  lastMatch = null;
-  save();
-  renderRankings();
-  pickAndRenderPair();
-}
-
-function renderRankings(){
-  const sorted = items.slice().sort((a,b)=> b.elo - a.elo || a.title.localeCompare(b.title));
-  tbody.innerHTML = '';
-  sorted.forEach((it, idx) => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td class="rank">${idx+1}</td>
-      <td class="song">${escapeHtml(it.title)}</td>
-      <td class="artist">${escapeHtml(it.artist)}</td>
-      <td class="elo">${it.elo.toFixed(2)}</td>
-      <td class="rec">${it.w}-${it.l}-${it.t}</td>
-      <td class="gp">${it.gp}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
-function exportCSV(){
-  const sorted = items.slice().sort((a,b)=> b.elo - a.elo || a.title.localeCompare(b.title));
-  const lines = ["Rank,Song,Artist,Elo,W,L,T,GP"];
-  sorted.forEach((it, idx)=>{
-    const row = [
-      idx+1,
-      '"' + it.title.replace(/"/g,'""') + '"',
-      '"' + it.artist.replace(/"/g,'""') + '"',
-      it.elo.toFixed(2), it.w, it.l, it.t, it.gp
-    ].join(',');
-    lines.push(row);
-  });
-  const blob = new Blob([lines.join("\n")], {type:"text/csv;charset=utf-8"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = "song_elo.csv";
-  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-}
-
-function escapeHtml(s){
-  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-}
-</script>
+    if(!loadState()){resetState();} resortSongs(); renderTable(); renderProgress(); nextPair();
+  </script>
 </body>
 </html>
