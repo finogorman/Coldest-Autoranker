@@ -1,147 +1,80 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Song Elo Ranking</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <title>Song Ranking — Glicko-2</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root {
-      --bg: #f8fafc;
-      --border: #e5e5e5;
-      --primary: #0061a8;
-      --muted: #818181;
-      --table-header-bg: #f1f5f9;
-      --box-bg: #fff;
-      --box-hover: #def;
-      --shadow: 0 2px 8px rgba(0,0,0,0.03);
+    :root{
+      --bg:#f8fafc; --border:#e5e5e5; --primary:#0061a8; --muted:#70757a;
+      --head:#f1f5f9; --box:#fff; --hover:#e7f1ff; --shadow:0 2px 8px rgba(0,0,0,.04)
     }
-    body {
-      margin: 0;
-      background: var(--bg);
-      color: #202124;
-      font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
-    }
-    .container {
-      display: flex;
-      flex-direction: row;
-      max-width: 1200px;
-      margin: 32px auto;
-      gap: 32px;
-      min-height: 80vh;
-      padding: 0 16px;
-    }
-    .column {
-      flex: 1;
-      background: var(--box-bg);
-      border-radius: 10px;
-      box-shadow: var(--shadow);
-      border: 1px solid var(--border);
-      padding: 24px 20px 24px 20px;
-      display: flex;
-      flex-direction: column;
-      min-width: 350px;
-    }
-    .rankings-table-wrapper { flex: 1; overflow: auto; }
-    table.rankings {
-      width: 100%; border-collapse: collapse; font-size: 16px;
-    }
-    table.rankings th, table.rankings td {
-      padding: 8px 10px;
-      border-bottom: 1px solid var(--border);
-      text-align: left; vertical-align: middle;
-    }
-    table.rankings th {
-      position: sticky; top: 0;
-      background: var(--table-header-bg);
-      z-index: 2;
-      border-bottom: 2px solid var(--border);
-      font-weight: 600;
-      letter-spacing: 0.05em;
-    }
-    .vote-panel-title { font-size: 2em; font-weight: 700; margin-bottom: 4px; }
-    .vote-panel { display: flex; flex-direction: column; gap: 14px; align-items: center; flex: 1; }
-    .vote-question { font-size: 1.15em; color: var(--muted); margin-bottom: 10px; }
-    .vote-boxes { display: flex; gap: 32px; width: 100%; justify-content: center; margin-bottom: 14px; }
-    .vote-box {
-      flex: 1 1 0; min-width: 180px; max-width: 260px;
-      background: var(--box-bg);
-      border: 2px solid var(--border);
-      border-radius: 12px;
-      cursor: pointer;
-      box-shadow: var(--shadow);
-      padding: 32px 20px;
-      display: flex; flex-direction: column; align-items: center;
-      transition: border-color 0.2s, background 0.2s;
-      font-size: 1.2em; font-weight: 500;
-      user-select: none;
-    }
-    .vote-box:hover, .vote-box.active { border-color: var(--primary); background: var(--box-hover); }
-    .vote-box .song-title { font-size: 1.18em; font-weight: 600; margin-bottom: 6px; text-align: center; }
-    .vote-box .song-artist { font-size: 1em; color: var(--muted); text-align: center; }
-    .vote-buttons { display: flex; gap: 14px; margin: 18px 0 6px 0; flex-wrap: wrap; justify-content: center; }
-    .vote-btn {
-      padding: 8px 18px; font-size: 1em; border-radius: 7px;
-      border: 1px solid var(--border);
-      background: var(--box-bg); color: var(--primary);
-      cursor: pointer; font-weight: 500;
-      transition: background 0.2s, border-color 0.2s;
-      box-shadow: var(--shadow);
-    }
-    .vote-btn:hover { background: var(--box-hover); border-color: var(--primary); }
-    .vote-btn.export { color: #008a19; border-color: #b6e5c8; }
-    .vote-btn.reset { color: #c80000; border-color: #f6b4b4; }
-    .progress-bar-container {
-      width: 100%; margin-top: 10px; height: 22px;
-      background: var(--border); border-radius: 12px; overflow: hidden;
-      box-shadow: var(--shadow);
-    }
-    .progress-bar { height: 100%; background: linear-gradient(90deg, var(--primary) 65%, #59b6fc 100%); transition: width 0.2s; border-radius: 12px; }
-    .progress-label { text-align: right; font-size: 0.99em; color: var(--muted); margin-top: 6px; }
-    @media (max-width: 950px) { .container { flex-direction: column; gap: 24px; } .column { min-width: 0; width: 100%; } .vote-boxes { gap: 14px; } }
-    @media (max-width: 650px) { .vote-box { padding: 18px 6px; font-size: 1em; } .vote-panel-title { font-size: 1.4em; } }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:#202124;font-family:Segoe UI,Roboto,Arial,sans-serif}
+    .container{display:flex;gap:32px;max-width:1200px;margin:32px auto;min-height:80vh;padding:0 16px}
+    .col{flex:1;background:var(--box);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);padding:20px;min-width:340px;display:flex;flex-direction:column}
+    h2{margin:0 0 12px 0;font-size:1.3em}
+    .wrap{flex:1;overflow:auto}
+    table{width:100%;border-collapse:collapse;font-size:16px}
+    th,td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:left;vertical-align:middle}
+    th{position:sticky;top:0;background:var(--head);border-bottom:2px solid var(--border);font-weight:600}
+    /* Vote panel */
+    .vote-panel{align-items:center}
+    .title{font-size:1.8em;font-weight:700;margin-bottom:4px}
+    .sub{color:var(--muted);margin-bottom:10px}
+    .boxes{display:flex;gap:24px;justify-content:center;width:100%;margin:6px 0 16px}
+    .box{flex:1 1 0;min-width:180px;max-width:260px;border:2px solid var(--border);border-radius:12px;padding:24px 16px;text-align:center;cursor:pointer;user-select:none;background:var(--box);transition:.15s}
+    .box:hover,.box.active{border-color:var(--primary);background:var(--hover)}
+    .st{font-weight:700}
+    .sa{color:var(--muted)}
+    .row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin:8px 0}
+    button{padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:#fff;color:#0b57d0;cursor:pointer}
+    button:hover{background:var(--hover);border-color:#bcd4ff}
+    .export{color:#0a7a27}
+    .reset{color:#c52626}
+    .pbar{width:100%;height:20px;border-radius:10px;background:var(--border);overflow:hidden;box-shadow:var(--shadow)}
+    .fill{height:100%;background:linear-gradient(90deg,#0061a8 65%,#59b6fc);width:0%}
+    .plabel{color:var(--muted);text-align:right;margin-top:6px}
+    @media (max-width:950px){.container{flex-direction:column;gap:20px} .col{min-width:0}}
   </style>
 </head>
 <body>
   <div class="container">
-    <!-- Rankings Table (Left) -->
-    <div class="column">
-      <h2 style="margin:0 0 12px 0; font-size:1.35em;">Rankings</h2>
-      <div class="rankings-table-wrapper">
-        <table class="rankings" id="rankingsTable">
+    <!-- Left: Rankings -->
+    <div class="col">
+      <h2>Rankings</h2>
+      <div class="wrap">
+        <table id="tbl">
           <thead>
-            <tr><th>Rank</th><th>Song</th><th>Artist</th><th>Elo</th><th>W-L-T</th><th>GP</th></tr>
+            <tr><th>Rank</th><th>Song</th><th>Artist</th><th>Rating</th><th>W-L-T</th><th>GP</th></tr>
           </thead>
-          <tbody></tbody>
+          <tbody id="tbody"></tbody>
         </table>
       </div>
     </div>
-    <!-- Voting Panel (Right) -->
-    <div class="column vote-panel">
-      <div class="vote-panel-title">Vote</div>
-      <div class="vote-question">Which song do you prefer?</div>
-      <div class="vote-boxes">
-        <div class="vote-box" id="voteBoxLeft">
-          <div class="song-title" id="leftSongTitle">Song A</div>
-          <div class="song-artist" id="leftSongArtist">Artist A</div>
-        </div>
-        <div class="vote-box" id="voteBoxRight">
-          <div class="song-title" id="rightSongTitle">Song B</div>
-          <div class="song-artist" id="rightSongArtist">Artist B</div>
-        </div>
+
+    <!-- Right: Vote -->
+    <div class="col vote-panel">
+      <div class="title">Vote</div>
+      <div class="sub">Which song do you prefer? Click a box or use 1 / 2. Tie = T. Undo = U.</div>
+      <div class="boxes">
+        <div class="box" id="boxL"><div class="st" id="lt"></div><div class="sa" id="la"></div></div>
+        <div class="box" id="boxR"><div class="st" id="rt"></div><div class="sa" id="ra"></div></div>
       </div>
-      <div class="vote-buttons">
-        <button class="vote-btn" id="tieBtn">Tie [T]</button>
-        <button class="vote-btn" id="undoBtn">Undo [U]</button>
-        <button class="vote-btn export" id="exportBtn">Export CSV</button>
-        <button class="vote-btn reset" id="resetBtn">Reset</button>
+      <div class="row">
+        <button id="tie">Tie [T]</button>
+        <button id="undo">Undo [U]</button>
+        <button class="export" id="exp">Export CSV</button>
+        <button class="reset" id="reset">Reset</button>
       </div>
-      <div class="progress-bar-container">
-        <div class="progress-bar" id="progressBar"></div>
-      </div>
-      <div class="progress-label" id="progressLabel">0 votes cast</div>
+      <div class="pbar"><div class="fill" id="fill"></div></div>
+      <div class="plabel" id="plabel">0 votes</div>
     </div>
   </div>
+
   <script>
+    /* ====== DATA ====== */
+    // Paste your full 260-line list here (keep "Title — Artist" format)
     const SONG_ARRAY = [
 "Feelin' Love - Euphoria Mix* — 22 Interns, Entasia",
 "Hold On — 49th & Main, Shee",
@@ -347,7 +280,7 @@
 "Like an Animal — RÜFÜS DU SOL",
 "Say a Prayer For Me — RÜFÜS DU SOL",
 "This Summer — RÜFÜS DU SOL",
-"Touch Me - Radio Edit — Rui Da Silva, Cassandra",
+"What About Us - Flume, Chet Faker",
 "Kiss of Life — Sade",
 "Straight and Narrow — Sam Barber",
 "All Is On My Side — Sam Fender",
@@ -404,56 +337,210 @@
 "We Come Running — Youngblood Hawke",
 "Control — Zoe Wees"
 ];
+  "Bohemian Rhapsody — Queen",
+      "Imagine — John Lennon",
+      "Hey Jude — The Beatles",
+      "Smells Like Teen Spirit — Nirvana",
+      "Hotel California — Eagles"
+      // ... replace with your full list (you already have it)
+    ];
 
-    const K_FACTOR = 24;
-    const STORAGE_KEY = "songEloRanking_v1";
-    let songs = [], voteHistory = [], voteCount = 0, currentPair = [null,null];
+    /* ====== Glicko-2 constants ====== */
+    const SCALE = 173.7178;   // rating scale factor
+    const R_INIT = 1500, RD_INIT = 350, SIG_INIT = 0.06;
+    const TAU = 0.5;          // volatility constraint
+    const STORE = "songGlicko2_v1";
 
-    const rankingsTableBody = document.querySelector("#rankingsTable tbody");
-    const leftSongTitle = document.getElementById("leftSongTitle");
-    const leftSongArtist = document.getElementById("leftSongArtist");
-    const rightSongTitle = document.getElementById("rightSongTitle");
-    const rightSongArtist = document.getElementById("rightSongArtist");
-    const voteBoxLeft = document.getElementById("voteBoxLeft");
-    const voteBoxRight = document.getElementById("voteBoxRight");
-    const tieBtn = document.getElementById("tieBtn");
-    const undoBtn = document.getElementById("undoBtn");
-    const resetBtn = document.getElementById("resetBtn");
-    const exportBtn = document.getElementById("exportBtn");
-    const progressBar = document.getElementById("progressBar");
-    const progressLabel = document.getElementById("progressLabel");
+    /* ====== State ====== */
+    let songs = [];      // {idx,title,artist,r,rd,sigma,w,l,t,g}
+    let votes = 0;
+    let last = null;     // undo snapshot
+    let curA = null, curB = null;
 
-    function parseSong(s){ let [title,artist]=s.split(" — "); return {title:title.trim(),artist:artist?artist.trim():""};}
-    function formatWLT(s){ return `${s.wins}-${s.losses}-${s.ties}`;}
-    function toCSV(arr){ let header="Rank,Song,Artist,Elo,W-L-T,GP"; let rows=arr.map((s,i)=>[i+1,`"${s.title}"`,`"${s.artist}"`,s.elo.toFixed(1),`"${formatWLT(s)}"`,s.games].join(",")); return header+"\n"+rows.join("\n"); }
-    function saveState(){ localStorage.setItem(STORAGE_KEY,JSON.stringify({songs,voteHistory,voteCount})); }
-    function loadState(){ let d=localStorage.getItem(STORAGE_KEY); if(!d)return false; try{let o=JSON.parse(d);songs=o.songs;voteHistory=o.voteHistory||[];voteCount=o.voteCount||0;return true;}catch{return false;} }
-    function resetState(){ songs=SONG_ARRAY.map((s,idx)=>{let {title,artist}=parseSong(s);return{title,artist,elo:1000,wins:0,losses:0,ties:0,games:0,idx};}); voteHistory=[];voteCount=0; saveState();}
-    function expected(a,b){ return 1/(1+Math.pow(10,(b-a)/400)); }
-    function applyVote(idxA,idxB,winner,tie=false){
-      let a=songs.find(x=>x.idx===idxA), b=songs.find(x=>x.idx===idxB);
-      let Ea=expected(a.elo,b.elo), Eb=expected(b.elo,a.elo);
-      let Sa,Sb; if(tie){Sa=0.5;Sb=0.5;a.ties++;b.ties++;} else if(winner===0){Sa=1;Sb=0;a.wins++;b.losses++;} else{Sa=0;Sb=1;a.losses++;b.wins++;}
-      voteHistory.push({idxA,idxB,prevA:{...a},prevB:{...b}});
-      a.elo+=K_FACTOR*(Sa-Ea); b.elo+=K_FACTOR*(Sb-Eb); a.games++; b.games++; voteCount++; saveState(); resortSongs();
+    /* ====== DOM ====== */
+    const tbody = document.getElementById('tbody');
+    const lt = document.getElementById('lt'), la = document.getElementById('la');
+    const rt = document.getElementById('rt'), ra = document.getElementById('ra');
+    const boxL = document.getElementById('boxL'), boxR = document.getElementById('boxR');
+    const tieBtn = document.getElementById('tie'), undoBtn = document.getElementById('undo');
+    const resetBtn = document.getElementById('reset'), expBtn = document.getElementById('exp');
+    const fill = document.getElementById('fill'), plabel = document.getElementById('plabel');
+
+    /* ====== Utils ====== */
+    const split = s => { const p = s.split(" — "); return [p[0]||s, p[1]||""]; };
+    const fmtRec = s => `${s.w}-${s.l}-${s.t}`;
+    const toCSV = arr => {
+      const lines = ["Rank,Song,Artist,Rating,W-L-T,GP"];
+      arr.forEach((s,i)=>lines.push([i+1,`"${s.title.replace(/"/g,'""')}"`,`"${s.artist.replace(/"/g,'""')}"`,
+        s.r.toFixed(1),`"${fmtRec(s)}"`,s.g].join(',')));
+      return lines.join('\n');
+    };
+    function save(){ localStorage.setItem(STORE, JSON.stringify({songs, votes})); }
+    function load(){
+      try{
+        const s = JSON.parse(localStorage.getItem(STORE) || "null");
+        if(!s || !Array.isArray(s.songs)) return false;
+        songs = s.songs; votes = s.votes||0; return true;
+      }catch{ return false; }
     }
-    function undoLastVote(){ if(!voteHistory.length)return; let last=voteHistory.pop(); Object.assign(songs.find(x=>x.idx===last.idxA),last.prevA); Object.assign(songs.find(x=>x.idx===last.idxB),last.prevB); voteCount=Math.max(0,voteCount-1); saveState(); resortSongs(); showPair(last.idxA,last.idxB);}
-    function resortSongs(){ songs.sort((a,b)=>b.elo-a.elo||a.title.localeCompare(b.title)); }
-    function pickPair(){ let minGames=Math.min(...songs.map(s=>s.games)); let pool=songs.filter(s=>s.games===minGames); let A=pool[Math.floor(Math.random()*pool.length)]; let others=songs.filter(s=>s.idx!==A.idx); others.sort((x,y)=>Math.abs(x.elo-A.elo)-Math.abs(y.elo-A.elo)); let B=others[0]; return [A.idx,B.idx]; }
-    function showPair(idxA,idxB){ currentPair=[idxA,idxB]; let a=songs.find(s=>s.idx===idxA), b=songs.find(s=>s.idx===idxB); leftSongTitle.textContent=a.title;leftSongArtist.textContent=a.artist; rightSongTitle.textContent=b.title;rightSongArtist.textContent=b.artist;}
-    function nextPair(){ let [i,j]=pickPair(); showPair(i,j);}
-    function renderTable(){ rankingsTableBody.innerHTML=songs.map((s,i)=>`<tr><td>${i+1}</td><td>${s.title}</td><td>${s.artist}</td><td>${s.elo.toFixed(1)}</td><td>${formatWLT(s)}</td><td>${s.games}</td></tr>`).join(""); }
-    function renderProgress(){ let maxVotes=Math.max(100,voteCount,...songs.map(s=>s.games)); let pct=voteCount/maxVotes; progressBar.style.width=`${(pct*100).toFixed(1)}%`; progressLabel.textContent=`${voteCount} vote${voteCount===1?"":"s"} cast`; }
+    function seed(){
+      songs = SONG_ARRAY.map((s,idx)=>{const [title,artist]=split(s);return {
+        idx,title,artist,r:R_INIT,rd:RD_INIT,sigma:SIG_INIT,w:0,l:0,t:0,g:0
+      };});
+      votes = 0; save();
+    }
 
-    voteBoxLeft.onclick=()=>{applyVote(currentPair[0],currentPair[1],0,false);renderTable();renderProgress();nextPair();};
-    voteBoxRight.onclick=()=>{applyVote(currentPair[0],currentPair[1],1,false);renderTable();renderProgress();nextPair();};
-    tieBtn.onclick=()=>{applyVote(currentPair[0],currentPair[1],null,true);renderTable();renderProgress();nextPair();};
-    undoBtn.onclick=()=>{undoLastVote();renderTable();renderProgress();};
-    resetBtn.onclick=()=>{if(confirm("Reset all progress?")){resetState();resortSongs();renderTable();renderProgress();nextPair();}};
-    exportBtn.onclick=()=>{let csv=toCSV(songs);let blob=new Blob([csv],{type:'text/csv'});let url=URL.createObjectURL(blob);let a=document.createElement('a');a.href=url;a.download="song_rankings.csv";document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);};
-    window.addEventListener("keydown",e=>{if(e.key==="1")voteBoxLeft.click();else if(e.key==="2")voteBoxRight.click();else if(e.key.toLowerCase()==="t")tieBtn.click();else if(e.key.toLowerCase()==="u")undoBtn.click();});
+    /* ====== Glicko-2 core ====== */
+    const g = phi => 1 / Math.sqrt(1 + (3*phi*phi)/Math.PI/Math.PI);
+    const E = (mu, muj, phij) => 1 / (1 + Math.exp(-g(phij) * (mu - muj)));
+    function volatility(phi, sigma, v, delta){
+      const a = Math.log(sigma*sigma);
+      const f = x => {
+        const ex = Math.exp(x);
+        const num = ex * (delta*delta - phi*phi - v - ex);
+        const den = 2 * Math.pow(phi*phi + v + ex, 2);
+        return (num/den) - ((x - a) / (TAU*TAU));
+      };
+      // Find B
+      let A = a, B;
+      if (delta*delta > phi*phi + v) B = Math.log(delta*delta - phi*phi - v);
+      else {
+        let k = 1;
+        while (f(a - k*TAU) < 0) k++;
+        B = a - k*TAU;
+      }
+      let fA = f(A), fB = f(B);
+      while (Math.abs(B - A) > 1e-6){
+        const C = A + (A - B) * fA / (fB - fA);
+        const fC = f(C);
+        if (fC * fB < 0){ A = B; fA = fB; }
+        else { fA = fA / 2; }
+        B = C; fB = fC;
+      }
+      return Math.exp(A/2);
+    }
+    // Update one player against one opponent with score s ∈ {1, 0, 0.5}
+    function glicko2Update(player, opp, s){
+      // Convert to Glicko-2 scale
+      const mu = (player.r - 1500) / SCALE;
+      const phi = player.rd / SCALE;
+      const muj = (opp.r - 1500) / SCALE;
+      const phij = opp.rd / SCALE;
 
-    if(!loadState()){resetState();} resortSongs(); renderTable(); renderProgress(); nextPair();
+      const Eij = E(mu, muj, phij);
+      const gij = g(phij);
+      const v = 1 / (gij*gij * Eij * (1 - Eij));
+      const delta = v * gij * (s - Eij);
+
+      const sigmaP = volatility(phi, player.sigma, v, delta);
+      const phiStar = Math.sqrt(phi*phi + sigmaP*sigmaP);
+      const phiP = 1 / Math.sqrt(1/(phiStar*phiStar) + 1/v);
+      const muP = mu + phiP*phiP * gij * (s - Eij);
+
+      player.sigma = sigmaP;
+      player.r = 1500 + SCALE * muP;
+      player.rd = SCALE * phiP;
+
+      // Clamp RD to sane bounds
+      player.rd = Math.max(30, Math.min(350, player.rd));
+    }
+
+    /* ====== Pairing and render ====== */
+    function resort(){ songs.sort((a,b)=> b.r - a.r || a.title.localeCompare(b.title)); }
+    function render(){
+      tbody.innerHTML = songs.map((s,i)=>`
+        <tr>
+          <td>${i+1}</td>
+          <td>${s.title}</td>
+          <td>${s.artist}</td>
+          <td>${s.r.toFixed(1)}</td>
+          <td>${fmtRec(s)}</td>
+          <td>${s.g}</td>
+        </tr>`).join('');
+      const cap = Math.max(100, votes, ...songs.map(x=>x.g));
+      const pct = (votes/cap)*100;
+      fill.style.width = pct.toFixed(1) + '%';
+      plabel.textContent = `${votes} vote${votes===1?'':'s'}`;
+    }
+    function pickPair(){
+      const minG = Math.min(...songs.map(s=>s.g));
+      const pool = songs.filter(s=>s.g <= minG + 1);
+      const A = pool[Math.floor(Math.random()*pool.length)];
+      const others = songs.filter(s=>s.idx !== A.idx).slice().sort((x,y)=>
+        Math.abs(x.r - A.r) - Math.abs(y.r - A.r));
+      const B = others[0] || songs.find(s=>s.idx!==A.idx);
+      return [A,B];
+    }
+    function showPair(){
+      [curA, curB] = pickPair();
+      lt.textContent = curA.title; la.textContent = curA.artist;
+      rt.textContent = curB.title; ra.textContent = curB.artist;
+      boxL.classList.remove('active'); boxR.classList.remove('active');
+    }
+
+    /* ====== Voting, Undo, Export ====== */
+    function snapshot(){
+      last = {
+        a: {...curA}, b: {...curB}, votes
+      };
+    }
+    function applyResult(side){ // 'L','R','T'
+      snapshot();
+      if (side==='L'){
+        glicko2Update(curA, curB, 1); glicko2Update(curB, curA, 0);
+        curA.w++; curB.l++;
+      } else if (side==='R'){
+        glicko2Update(curA, curB, 0); glicko2Update(curB, curA, 1);
+        curB.w++; curA.l++;
+      } else {
+        glicko2Update(curA, curB, 0.5); glicko2Update(curB, curA, 0.5);
+        curA.t++; curB.t++;
+      }
+      curA.g++; curB.g++; votes++;
+      save(); resort(); render(); showPair();
+    }
+    function undo(){
+      if (!last) return;
+      // restore both players fully, including W/L/T/GP and rating params
+      const A = songs.find(s=>s.idx===last.a.idx);
+      const B = songs.find(s=>s.idx===last.b.idx);
+      Object.assign(A, last.a);
+      Object.assign(B, last.b);
+      votes = last.votes;
+      last = null;
+      save(); resort(); render(); // ensure W-L-T column updates
+      // show the same pair again
+      curA = A; curB = B;
+      lt.textContent = curA.title; la.textContent = curA.artist;
+      rt.textContent = curB.title; ra.textContent = curB.artist;
+    }
+    function exportCSV(){
+      const sorted = songs.slice().sort((a,b)=> b.r - a.r || a.title.localeCompare(b.title));
+      const csv = toCSV(sorted);
+      const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'song_glicko2_rankings.csv';
+      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    }
+
+    /* ====== Events ====== */
+    boxL.onclick = ()=>{ boxL.classList.add('active'); setTimeout(()=>boxL.classList.remove('active'),120); applyResult('L'); };
+    boxR.onclick = ()=>{ boxR.classList.add('active'); setTimeout(()=>boxR.classList.remove('active'),120); applyResult('R'); };
+    tieBtn.onclick = ()=> applyResult('T');
+    undoBtn.onclick = undo;
+    resetBtn.onclick = ()=>{ if(confirm('Reset all progress?')){ seed(); resort(); render(); showPair(); } };
+    expBtn.onclick = exportCSV;
+    window.addEventListener('keydown', e=>{
+      const k = e.key.toLowerCase();
+      if (k==='1') boxL.click();
+      else if (k==='2') boxR.click();
+      else if (k==='t') tieBtn.click();
+      else if (k==='u') undoBtn.click();
+    });
+
+    /* ====== Init ====== */
+    if (!load()) seed();
+    resort(); render(); showPair();
   </script>
 </body>
 </html>
