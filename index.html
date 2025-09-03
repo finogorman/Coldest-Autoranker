@@ -158,6 +158,20 @@ button:hover{background:var(--hover);border-color:#bcd4ff}
     <p>You can export rankings as CSV at any time.</p>
   </div>
 </div>
+/* ---- restore old layout look ---- */
+.col.left, .col.right { flex: 1 1 0; }        /* equal columns again */
+.row { justify-content: center; }             /* center the buttons */
+.boxes { gap: 32px; }                         /* wider gap like before */
+
+/* let the table size itself naturally (remove fixed widths) */
+th:nth-child(1), th:nth-child(4),
+th:nth-child(5), th:nth-child(6) { width: auto; }
+
+/* slightly tighter table padding like before */
+th, td { padding: 8px 10px; }
+
+/* match previous font sizing/spacing feel */
+body { font-size: 16px; line-height: 1.35; }
   <script>
     /* ====== DATA ====== */
     const SONG_ARRAY = [
