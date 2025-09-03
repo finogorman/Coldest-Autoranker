@@ -6,98 +6,143 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root {
-      --bg:#f8fafc; --border:#e5e5e5; --primary:#0061a8; --muted:#70757a;
-      --head:#f1f5f9; --box:#fff; --hover:#e7f1ff; --shadow:0 2px 8px rgba(0,0,0,.04);
-    }
-    *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:#202124;font-family:Segoe UI,Roboto,Arial,sans-serif}
-    .container{display:flex;gap:32px;max-width:1200px;margin:32px auto;min-height:80vh;padding:0 16px}
-    .col{flex:1;background:var(--box);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);padding:20px;min-width:340px;display:flex;flex-direction:column}
-    h2{margin:0 0 12px 0;font-size:1.3em}
-    .wrap{flex:1;overflow:auto}
-    table{width:100%;border-collapse:collapse;font-size:16px}
-    th,td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:left;vertical-align:middle}
-    th{position:sticky;top:0;background:var(--head);border-bottom:2px solid var(--border);font-weight:600}
-    /* Vote panel */
-    .vote-panel{align-items:center}
-    .title{font-size:1.8em;font-weight:700;margin-bottom:4px}
-    .sub{color:var(--muted);margin-bottom:10px}
-    .boxes{display:flex;gap:24px;justify-content:center;width:100%;margin:6px 0 16px}
-    .box{flex:1 1 0;min-width:180px;max-width:260px;border:2px solid var(--border);border-radius:12px;padding:24px 16px;text-align:center;cursor:pointer;user-select:none;background:var(--box);transition:.15s}
-    .box:hover,.box.active{border-color:var(--primary);background:var(--hover)}
-    .st{font-weight:700}
-    .sa{color:var(--muted)}
-    .row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin:8px 0}
-    button{padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:#fff;color:#0b57d0;cursor:pointer}
-    button:hover{background:var(--hover);border-color:#bcd4ff}
-    .export{color:#0a7a27}
-    .reset{color:#c52626}
-    .info{color:#444; border-color:#bbb}
-    .pbar{width:100%;height:20px;border-radius:10px;background:var(--border);overflow:hidden;box-shadow:var(--shadow)}
-    .fill{height:100%;background:linear-gradient(90deg,#0061a8 65%,#59b6fc);width:0%}
-    .plabel{color:var(--muted);text-align:right;margin-top:6px}
-    @media (max-width:950px){.container{flex-direction:column;gap:20px} .col{min-width:0}}
+  --bg:#f8fafc; --border:#e5e5e5; --primary:#0061a8; --muted:#70757a;
+  --head:#f1f5f9; --box:#fff; --hover:#e7f1ff; --shadow:0 2px 8px rgba(0,0,0,.04);
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--bg);
+  color:#202124;
+  font-family:Segoe UI,Roboto,Arial,sans-serif;
+  line-height:1.4;
+  font-size:16px;
+}
+.container{
+  display:flex;
+  gap:32px;
+  max-width:1200px;
+  margin:32px auto;
+  min-height:80vh;
+  padding:0 16px;
+}
+.col{
+  background:var(--box);
+  border:1px solid var(--border);
+  border-radius:10px;
+  box-shadow:var(--shadow);
+  padding:20px;
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+}
+.col.left{flex:0 0 58%;}
+.col.right{flex:0 0 42%;}
+h2{margin:0 0 12px 0;font-size:1.3em}
+.wrap{flex:1;overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:16px}
+th,td{padding:10px 12px;border-bottom:1px solid var(--border);text-align:left;vertical-align:middle}
+th{position:sticky;top:0;background:var(--head);border-bottom:2px solid var(--border);font-weight:600}
+th:nth-child(1){width:64px}
+th:nth-child(4){width:96px}
+th:nth-child(5){width:110px}
+th:nth-child(6){width:70px}
 
-    /* Modal styles */
-    .modal{display:none;position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;overflow:auto;background:rgba(0,0,0,0.4)}
-    .modal-content{background:#fff;margin:10% auto;padding:20px;border:1px solid var(--border);width:90%;max-width:600px;border-radius:8px;box-shadow:var(--shadow)}
-    .modal h3{margin-top:0}
-    .close{color:#aaa;float:right;font-size:28px;font-weight:bold;cursor:pointer}
-    .close:hover{color:#000}
+/* Vote panel */
+.vote-panel{align-items:center}
+.title{font-size:1.8em;font-weight:700;margin-bottom:4px}
+.sub{color:var(--muted);margin-bottom:10px}
+.boxes{display:flex;gap:24px;justify-content:center;width:100%;margin:6px 0 16px}
+.box{
+  flex:1 1 0;
+  min-width:180px;max-width:260px;
+  border:2px solid var(--border);
+  border-radius:12px;
+  padding:24px 16px;
+  text-align:center;
+  cursor:pointer;
+  user-select:none;
+  background:var(--box);
+  transition:.15s;
+}
+.box:hover,.box.active{border-color:var(--primary);background:var(--hover)}
+.st{font-weight:700}
+.sa{color:var(--muted)}
+.row{display:flex;gap:12px;flex-wrap:wrap;justify-content:flex-start;margin:8px 0}
+button{
+  padding:8px 14px;
+  border-radius:8px;
+  border:1px solid var(--border);
+  background:#fff;
+  color:#0b57d0;
+  cursor:pointer;
+}
+button:hover{background:var(--hover);border-color:#bcd4ff}
+.export{color:#0a7a27}
+.reset{color:#c52626}
+.info{color:#444; border-color:#bbb}
+.pbar{width:100%;height:20px;border-radius:10px;background:var(--border);overflow:hidden;box-shadow:var(--shadow)}
+.fill{height:100%;background:linear-gradient(90deg,#0061a8 65%,#59b6fc);width:0%}
+.plabel{color:var(--muted);text-align:right;margin-top:6px}
+
+@media (max-width:950px){
+  .container{flex-direction:column;gap:20px}
+  .col.left,.col.right{flex:1 1 auto}
+}
+
+/* Modal styles (scoped to #infoModal only) */
+#infoModal{display:none;position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;overflow:auto;background:rgba(0,0,0,0.4)}
+#infoModal .modal-content{
+  background:#fff;
+  margin:10% auto;
+  padding:20px;
+  border:1px solid var(--border);
+  width:90%;max-width:600px;
+  border-radius:8px;
+  box-shadow:var(--shadow);
+}
+#infoModal h3{margin-top:0}
+#infoModal .close{color:#aaa;float:right;font-size:28px;font-weight:bold;cursor:pointer}
+#infoModal .close:hover{color:#000}
   </style>
 </head>
 <body>
-  <div class="container">
-    <!-- Left: Rankings -->
-    <div class="col">
-      <h2>Rankings</h2>
-      <div class="wrap">
-        <table id="tbl">
-          <thead>
-            <tr><th>Rank</th><th>Song</th><th>Artist</th><th>Rating</th><th>W-L-T</th><th>GP</th></tr>
-          </thead>
-          <tbody id="tbody"></tbody>
-        </table>
-      </div>
-    </div>
+ <div class="container">
+  <!-- Left: Rankings -->
+  <div class="col left">
+    <h2>Rankings</h2>
+    <div class="wrap">
+      <table id="tbl">
+        <thead>
+          <tr>
+            <th>Rank</th><th>Song</th><th>Artist</th>
+            <th>Rating</th><th>W-L-T</th><th>GP</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
 
-    <!-- Right: Vote -->
-    <div class="col vote-panel">
-      <div class="title">Vote</div>
-      <div class="sub">Which song do you prefer? Click a box or use 1 / 2. Tie = T. Undo = U.</div>
-      <div class="boxes">
-        <div class="box" id="boxL"><div class="st" id="lt"></div><div class="sa" id="la"></div></div>
-        <div class="box" id="boxR"><div class="st" id="rt"></div><div class="sa" id="ra"></div></div>
-      </div>
-      <div class="row">
-        <button id="tie">Tie [T]</button>
-        <button id="undo">Undo [U]</button>
-        <button class="export" id="exp">Export CSV</button>
-        <button class="reset" id="reset">Reset</button>
-        <button class="info" id="infoBtn">Info</button>
-      </div>
-      <div class="pbar"><div class="fill" id="fill"></div></div>
-      <div class="plabel" id="plabel">0 votes</div>
-    </div>
-  </div>
-
-  <!-- Modal -->
-  <div id="infoModal" class="modal">
-    <div class="modal-content">
-      <span class="close" id="closeModal">&times;</span>
-      <h3>How it works</h3>
-      <p>Click one of the two boxes to vote for the song you prefer. You can also press keys:</p>
-      <ul>
-        <li><b>1</b> = left song</li>
-        <li><b>2</b> = right song</li>
-        <li><b>T</b> = tie</li>
-        <li><b>U</b> = undo last vote</li>
-      </ul>
-      <p>Rankings use the <b>Glicko-2 system</b>, which updates ratings based on matchups and how confident the system is. The blue bar at the bottom shows how stable the rankings are becoming as more votes are cast.</p>
-      <p>You can export rankings as CSV at any time.</p>
-    </div>
-  </div>
-
+  <!-- Right: Vote -->
+  <div class="col right vote-panel">
+    <div class="title">Vote</div>
+    <div class="sub">Which song do you prefer? Click a box or use 1 / 2. Tie = T. Undo = U.</div>
+    <div class="boxes">
+      <div class="box" id="boxL"><div class="st" id="lt"></div><div class="sa" id="la"></div></div>
+      <div class="box" id="boxR"><div class="st" id="rt"></div><div class="sa" id="ra"></div></div>
+    </div>
+    <div class="row">
+      <button id="tie">Tie [T]</button>
+      <button id="undo">Undo [U]</button>
+      <button class="export" id="exp">Export CSV</button>
+      <button class="reset" id="reset">Reset</button>
+      <button class="info" id="infoBtn">Info</button>
+    </div>
+    <div class="pbar"><div class="fill" id="fill"></div></div>
+    <div class="plabel" id="plabel">0 votes</div>
+  </div>
+</div>
   <script>
     /* ====== DATA ====== */
     const SONG_ARRAY = [
