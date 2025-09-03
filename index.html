@@ -338,6 +338,9 @@
 "Control — Zoe Wees"
 ];
     /* ====== Glicko-2 constants ====== */
+    // Progress targets
+const RD_START = RD_INIT;   // 350
+const RD_TARGET = 60;       // “stable” enough; tweak if you want
     const SCALE = 173.7178;   // rating scale factor
     const R_INIT = 1500, RD_INIT = 350, SIG_INIT = 0.06;
     const TAU = 0.5;          // volatility constraint
@@ -449,10 +452,15 @@
           <td>${fmtRec(s)}</td>
           <td>${s.g}</td>
         </tr>`).join('');
-      const cap = Math.max(100, votes, ...songs.map(x=>x.g));
-      const pct = (votes/cap)*100;
-      fill.style.width = pct.toFixed(1) + '%';
-      plabel.textContent = `${votes} vote${votes===1?'':'s'}`;
+      // Stability progress based on average RD moving from RD_START → RD_TARGET
+const avgRD = songs.reduce((sum,s)=>sum + s.rd, 0) / Math.max(1, songs.length);
+// Map RD to [0,100]% where 0% = RD_START, 100% = RD_TARGET (or lower)
+const pct = Math.max(0, Math.min(1,
+  (RD_START - avgRD) / (RD_START - RD_TARGET)
+)) * 100;
+
+fill.style.width = pct.toFixed(1) + '%';
+plabel.textContent = `${votes} vote${votes===1 ? '' : 's'} • stability ${pct.toFixed(1)}% • avg RD ${avgRD.toFixed(1)}`;
     }
     function pickPair(){
       const minG = Math.min(...songs.map(s=>s.g));
